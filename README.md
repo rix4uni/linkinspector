@@ -28,9 +28,9 @@ Usage of linkinspector:
   -ao string
         File to append output results instead of overwriting
   -c int
-        Number of concurrent goroutines (default 50) (default 50)
+        Number of concurrent goroutines (default 50)
   -delay duration
-        Duration between each HTTP request (eg: 200ms, 1s) (default -1ns) (default -1ns)
+        Duration between each HTTP request (eg: 200ms, 1s) (default -1ns)
   -insecure
         Disable TLS certificate verification
   -json
@@ -46,7 +46,7 @@ Usage of linkinspector:
   -silent
         silent mode.
   -timeout int
-        HTTP request timeout duration (in seconds) (default 10) (default 10)
+        HTTP request timeout duration (in seconds) (default 10)
   -u string
         Single URL to check
   -ua string

@@ -13,28 +13,8 @@ import (
 	"time"
 
 	"github.com/logrusorgru/aurora/v4"
+	"github.com/rix4uni/linkinspector/banner"
 )
-
-// prints the version message
-const version = "0.0.1"
-
-func printVersion() {
-	fmt.Printf("Current linkinspector version %s\n", version)
-}
-
-// Prints the Colorful banner
-func printBanner() {
-	banner := `
-    __ _         __    _                                  __              
-   / /(_)____   / /__ (_)____   _____ ____   ___   _____ / /_ ____   _____
-  / // // __ \ / //_// // __ \ / ___// __ \ / _ \ / ___// __// __ \ / ___/
- / // // / / // ,<  / // / / /(__  )/ /_/ //  __// /__ / /_ / /_/ // /    
-/_//_//_/ /_//_/|_|/_//_/ /_//____// .___/ \___/ \___/ \__/ \____//_/     
-                                  /_/                                     
-`
-fmt.Printf("%s\n%75s\n\n", banner, "Current linkinspector version "+version)
-
-}
 
 // Struct for JSON output
 type JSONOutput struct {
@@ -1817,11 +1797,11 @@ func main() {
 	urlFlag := flag.String("u", "", "Single URL to check")
 	listFlag := flag.String("list", "", "File containing list of URLs to check")
 	passiveFlag := flag.Bool("passive", false, "Enable passive mode to skip requests for specific extensions")
-	concurrencyFlag := flag.Int("c", 50, "Number of concurrent goroutines (default 50)")
-	timeoutFlag := flag.Int("timeout", 10, "HTTP request timeout duration (in seconds) (default 10)")
+	concurrencyFlag := flag.Int("c", 50, "Number of concurrent goroutines")
+	timeoutFlag := flag.Int("timeout", 10, "HTTP request timeout duration (in seconds)")
 	insecureFlag := flag.Bool("insecure", false, "Disable TLS certificate verification")
 	uaFlag := flag.String("ua", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36", "Custom User-Agent header for HTTP requests")
-	delayFlag := flag.Duration("delay", -1*time.Nanosecond, "Duration between each HTTP request (eg: 200ms, 1s) (default -1ns)")
+	delayFlag := flag.Duration("delay", -1*time.Nanosecond, "Duration between each HTTP request (eg: 200ms, 1s)")
 	jsonFlag := flag.Bool("json", false, "Output in JSON format")
 	jsonTypeFlag := flag.String("json-type", "MarshalIndent", "Output in JSON type, MarshalIndent or Marshal")
 	outputFileFlag := flag.String("o", "", "File to write output results")
@@ -1831,16 +1811,14 @@ func main() {
 	verboseFlag := flag.Bool("verbose", false, "Enable verbose mode to print more information")
 	flag.Parse()
 
-	// Print version and exit if -version flag is provided
 	if *version {
-		printBanner()
-		printVersion()
+		banner.PrintBanner()
+		banner.PrintVersion()
 		return
 	}
 
-	// Don't Print banner if -silnet flag is provided
 	if !*silent {
-		printBanner()
+		banner.PrintBanner()
 	}
 
 	// Convert timeoutFlag to a time.Duration
