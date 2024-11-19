@@ -9,9 +9,9 @@ go install github.com/rix4uni/linkinspector@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.1/linkinspector-linux-amd64-0.0.1.tgz
-tar -xvzf linkinspector-linux-amd64-0.0.1.tgz
-rm -rf linkinspector-linux-amd64-0.0.1.tgz
+wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.2/linkinspector-linux-amd64-0.0.2.tgz
+tar -xvzf linkinspector-linux-amd64-0.0.2.tgz
+rm -rf linkinspector-linux-amd64-0.0.2.tgz
 mv linkinspector ~/go/bin/linkinspector
 ```
 Or download [binary release](https://github.com/rix4uni/linkinspector/releases) for your platform.
