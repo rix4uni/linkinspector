@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,8 +12,103 @@ import (
 	"time"
 
 	"github.com/logrusorgru/aurora/v4"
+	"github.com/projectdiscovery/goflags"
 	"github.com/rix4uni/linkinspector/banner"
 )
+
+type Options struct {
+	InputTargetHost   string
+	InputFile         string
+	Passive           bool
+	MatchCode         string
+	MatchLength       string
+	MatchType         string
+	MatchSuffix       string
+	FilterCode        string
+	FilterLength      string
+	FilterContentType string
+	FilterSuffixName  string
+	Output            string
+	AppendOutput      string
+	JSONOutput        bool
+	JSONtype          string
+	Threads           int
+	UserAgent         string
+	Verbose           bool
+	Version           bool
+	Silent            bool
+	Timeout           int
+	Insecure          bool
+	Delay             time.Duration
+}
+
+// Define the flags
+func ParseOptions() *Options {
+	options := &Options{}
+	flagSet := goflags.NewFlagSet()
+	flagSet.SetDescription(`linkinspector is a command-line tool that analyzes URLs to retrieve HTTP status codes, content lengths, and content types.`)
+
+	createGroup(flagSet, "input", "Input",
+		flagSet.StringVarP(&options.InputTargetHost, "target", "u", "", "Single URL to check"),
+		flagSet.StringVarP(&options.InputFile, "list", "l", "", "File containing list of URLs to check"),
+	)
+
+	createGroup(flagSet, "probes", "Probes",
+		flagSet.BoolVar(&options.Passive, "passive", false, "Enable passive mode to skip requests for specific extensions"),
+	)
+
+	createGroup(flagSet, "matchers", "Matchers",
+		flagSet.StringVarP(&options.MatchCode, "match-code", "mc", "", "Match response with specified status code (e.g., -mc 200,302)"),
+		flagSet.StringVarP(&options.MatchLength, "match-length", "ml", "", "Match response with specified content length (e.g., -ml 100,102)"),
+		flagSet.StringVarP(&options.MatchType, "match-type", "mt", "", "Match response with specified content type (e.g., -mt \"application/octet-stream,text/html\")"),
+		flagSet.StringVarP(&options.MatchSuffix, "match-suffix", "ms", "", "Match response with specified suffix name (e.g., -ms \"ZIP,PHP,7Z\")"),
+	)
+
+	// createGroup(flagSet, "filters", "Filters",
+	//  	flag.StringVar(&options.FilterCode, "fc", "", "Filter response with specified status code (e.g., 403,401)")
+	// 	flag.StringVar(&options.FilterLength, "fl", "", "Filter response with specified content length (e.g., 23,33)")
+	// 	flag.StringVar(&options.FilterContentType, "ft", "", "Filter response with specified content type (e.g., \"text/html,image/jpeg\")")
+	// 	flag.StringVar(&options.FilterSuffixName, "fs", "", "Filter response with specified suffix name (e.g., \"CSS,Plain Text,html\")")
+	// )
+
+	createGroup(flagSet, "output", "Output",
+		flagSet.StringVarP(&options.Output, "output", "o", "", "File to write output results"),
+		flagSet.StringVar(&options.AppendOutput, "append-output", "", "File to append output results instead of overwriting"),
+		flagSet.BoolVar(&options.JSONOutput, "json", false, "Output in JSON format"),
+		flagSet.StringVar(&options.JSONtype, "json-type", "MarshalIndent", "Output in JSON type, MarshalIndent or Marshal"),
+	)
+
+	createGroup(flagSet, "rate-limit", "RATE-LIMIT",
+		flagSet.IntVarP(&options.Threads, "threads", "t", 50, "Number of threads to use"),
+	)
+
+	createGroup(flagSet, "configurations", "Configurations",
+		flagSet.StringVar(&options.UserAgent, "H", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36", "Custom User-Agent header for HTTP requests"),
+	)
+
+	createGroup(flagSet, "debug", "Debug",
+		flagSet.BoolVar(&options.Verbose, "verbose", false, "Enable verbose output for debugging purposes"),
+		flagSet.BoolVar(&options.Version, "version", false, "Print the version of the tool and exit"),
+		flagSet.BoolVar(&options.Silent, "silent", false, "silent mode"),
+	)
+
+	createGroup(flagSet, "optimizations", "OPTIMIZATIONS",
+		flagSet.IntVar(&options.Timeout, "timeout", 10, "HTTP request timeout duration (in seconds)"),
+		flagSet.BoolVar(&options.Insecure, "insecure", false, "Disable TLS certificate verification"),
+		flagSet.DurationVar(&options.Delay, "delay", -1*time.Nanosecond, "Duration between each HTTP request (e.g., 200ms, 1s)"),
+	)
+
+	_ = flagSet.Parse()
+
+	return options
+}
+
+func createGroup(flagSet *goflags.FlagSet, groupName, description string, flags ...*goflags.FlagData) {
+	flagSet.SetGroup(groupName, description)
+	for _, currentFlag := range flags {
+		currentFlag.Group(groupName)
+	}
+}
 
 // Struct for JSON output
 type JSONOutput struct {
@@ -28,8 +122,22 @@ type JSONOutput struct {
 	} `json:"data"`
 }
 
+// Function to check if a value matches any of the specified filters
+func matches(value string, filter string) bool {
+	if filter == "" {
+		return true // No filter applied
+	}
+	filters := strings.Split(filter, ",")
+	for _, f := range filters {
+		if strings.TrimSpace(f) == value {
+			return true
+		}
+	}
+	return false
+}
+
 // Check URL information and return the required output format with custom timeout, TLS, and User-Agent settings.
-func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, userAgent string, jsonOutput bool, jsonTypeFlag string, outputFile *os.File) {
+func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, userAgent string, jsonOutput bool, jsonTypeFlag string, outputFile *os.File, options *Options) {
 	// Create a custom HTTP client with the specified timeout and TLS settings.
 	client := &http.Client{
 		Timeout: timeout,
@@ -48,6 +156,7 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 	}
 	req.Header.Set("User-Agent", userAgent)
 
+	// Perform the HTTP request.
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Error fetching %s: %v\n", url, err)
@@ -55,9 +164,10 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 	}
 	defer resp.Body.Close()
 
+	// Extract response details.
 	statusCode := resp.StatusCode
 	contentLength := resp.ContentLength
-	contentType := resp.Header.Get("Content-Type")
+	contentType := strings.TrimSpace(strings.Split(resp.Header.Get("Content-Type"), ";")[0])
 
 	// Define a map for content types and their corresponding suffixes
 	validExtension := map[string]string{
@@ -161,6 +271,21 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 		suffix = ""
 	}
 
+	// Apply matchers to filter the response.
+	if !matches(fmt.Sprintf("%d", statusCode), options.MatchCode) {
+		return // Skip if status code does not match.
+	}
+	if !matches(fmt.Sprintf("%d", contentLength), options.MatchLength) {
+		return // Skip if content length does not match.
+	}
+	if !matches(contentType, options.MatchType) {
+		return // Skip if content type does not match.
+	}
+	if !matches(strings.Trim(suffix, "[]"), options.MatchSuffix) {
+		return // Skip if suffix does not match.
+	}
+
+	// Handle JSON output.
 	if jsonOutput {
 		output := JSONOutput{
 			Host: url,
@@ -169,36 +294,36 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 		output.Data.StatusCode = int64(statusCode)
 		output.Data.ContentLength = int64(contentLength)
 		output.Data.ContentType = contentType
-		output.Data.Suffix = strings.Trim(suffix, "[]") // Remove both brackets
+		output.Data.Suffix = strings.Trim(suffix, "[]") // Remove brackets.
 
 		var jsonData []byte
 		if jsonTypeFlag == "Marshal" {
 			jsonData, _ = json.Marshal(output)
 		} else {
-			jsonData, _ = json.MarshalIndent(output, "", "  ") // Pretty print the JSON
+			jsonData, _ = json.MarshalIndent(output, "", "  ") // Pretty print the JSON.
 		}
 		fmt.Println(string(jsonData))
 		if outputFile != nil {
 			outputFile.WriteString(string(jsonData) + "\n")
 		}
+		return
+	}
 
-	} else if !verbose {
-		outputLine := fmt.Sprintf("%s [%d] [%d] [%s] %s\n", url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
-		fmt.Print(outputLine)
-		if outputFile != nil {
-			outputFile.WriteString(outputLine)
-		}
+	// Handle non-verbose and verbose output.
+	outputLine := ""
+	if verbose {
+		outputLine = fmt.Sprintf("%s: %s [%d] [%d] [%s] %s\n", aurora.Bold(aurora.Blue("REQUEST BASED")), url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
 	} else {
-		outputLine := fmt.Sprintf("%s: %s [%d] [%d] [%s] %s\n", aurora.Bold(aurora.Blue("REQUEST BASED")), url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
-		fmt.Print(outputLine)
-		if outputFile != nil {
-			outputFile.WriteString(outputLine)
-		}
+		outputLine = fmt.Sprintf("%s [%d] [%d] [%s] %s\n", url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
+	}
+	fmt.Print(outputLine)
+	if outputFile != nil {
+		outputFile.WriteString(outputLine)
 	}
 }
 
 // Skip requests based on file extensions when the -passive flag is true.
-func processURL(url string, passive bool, verbose bool, timeout time.Duration, insecure bool, userAgent string, wg *sync.WaitGroup, sem chan struct{}, delay time.Duration, jsonOutput bool, jsonTypeFlag string, outputFile *os.File) {
+func processURL(url string, passive bool, verbose bool, timeout time.Duration, insecure bool, userAgent string, wg *sync.WaitGroup, sem chan struct{}, delay time.Duration, jsonOutput bool, jsonTypeFlag string, outputFile *os.File, options *Options) {
 	defer wg.Done()
 	// Acquire a spot in the semaphore
 	sem <- struct{}{}
@@ -1455,54 +1580,39 @@ func processURL(url string, passive bool, verbose bool, timeout time.Duration, i
 	}
 
 	// If not passive or extension not in map, proceed with the request.
-	getURLInfo(url, verbose, timeout, insecure, userAgent, jsonOutput, jsonTypeFlag, outputFile)
+	getURLInfo(url, verbose, timeout, insecure, userAgent, jsonOutput, jsonTypeFlag, outputFile, options)
 	time.Sleep(delay) // Apply delay between requests
 }
 
 func main() {
 	// Command-line flags
-	urlFlag := flag.String("u", "", "Single URL to check")
-	listFlag := flag.String("list", "", "File containing list of URLs to check")
-	passiveFlag := flag.Bool("passive", false, "Enable passive mode to skip requests for specific extensions")
-	concurrencyFlag := flag.Int("c", 50, "Number of concurrent goroutines")
-	timeoutFlag := flag.Int("timeout", 10, "HTTP request timeout duration (in seconds)")
-	insecureFlag := flag.Bool("insecure", false, "Disable TLS certificate verification")
-	uaFlag := flag.String("ua", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36", "Custom User-Agent header for HTTP requests")
-	delayFlag := flag.Duration("delay", -1*time.Nanosecond, "Duration between each HTTP request (eg: 200ms, 1s)")
-	jsonFlag := flag.Bool("json", false, "Output in JSON format")
-	jsonTypeFlag := flag.String("json-type", "MarshalIndent", "Output in JSON type, MarshalIndent or Marshal")
-	outputFileFlag := flag.String("o", "", "File to write output results")
-	appendOutputFlag := flag.String("ao", "", "File to append output results instead of overwriting")
-	silent := flag.Bool("silent", false, "silent mode.")
-	version := flag.Bool("version", false, "Print the version of the tool and exit.")
-	verboseFlag := flag.Bool("verbose", false, "Enable verbose mode to print more information")
-	flag.Parse()
+	options := ParseOptions()
 
-	if *version {
+	if options.Version {
 		banner.PrintBanner()
 		banner.PrintVersion()
 		return
 	}
 
-	if !*silent {
+	if !options.Silent {
 		banner.PrintBanner()
 	}
 
-	// Convert timeoutFlag to a time.Duration
-	timeout := time.Duration(*timeoutFlag) * time.Second
+	// Convert Timeout to a time.Duration
+	timeout := time.Duration(options.Timeout) * time.Second
 
 	// Set up a WaitGroup and a semaphore (channel) to control concurrency
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, *concurrencyFlag)
+	sem := make(chan struct{}, options.Threads)
 
 	var outputFile *os.File
 	var err error
-	if *outputFileFlag != "" || *appendOutputFlag != "" {
+	if options.Output != "" || options.AppendOutput != "" {
 		var outputFileName string
-		if *appendOutputFlag != "" {
-			outputFileName = *appendOutputFlag
+		if options.AppendOutput != "" {
+			outputFileName = options.AppendOutput
 		} else {
-			outputFileName = *outputFileFlag
+			outputFileName = options.Output
 		}
 
 		outputFile, err = os.OpenFile(outputFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -1513,17 +1623,17 @@ func main() {
 		defer outputFile.Close()
 	}
 
-	if *urlFlag != "" {
+	if options.InputTargetHost != "" {
 		wg.Add(1)
-		go processURL(*urlFlag, *passiveFlag, *verboseFlag, timeout, *insecureFlag, *uaFlag, &wg, sem, *delayFlag, *jsonFlag, *jsonTypeFlag, outputFile)
+		go processURL(options.InputTargetHost, options.Passive, options.Verbose, timeout, options.Insecure, options.UserAgent, &wg, sem, options.Delay, options.JSONOutput, options.JSONtype, outputFile, options)
 		wg.Wait()
 		return
 	}
 
-	if *listFlag != "" {
-		file, err := os.Open(*listFlag)
+	if options.InputFile != "" {
+		file, err := os.Open(options.InputFile)
 		if err != nil {
-			fmt.Printf("Error opening file %s: %v\n", *listFlag, err)
+			fmt.Printf("Error opening file %s: %v\n", options.InputFile, err)
 			return
 		}
 		defer file.Close()
@@ -1533,7 +1643,7 @@ func main() {
 			url := strings.TrimSpace(scanner.Text())
 			if url != "" {
 				wg.Add(1)
-				go processURL(url, *passiveFlag, *verboseFlag, timeout, *insecureFlag, *uaFlag, &wg, sem, *delayFlag, *jsonFlag, *jsonTypeFlag, outputFile)
+				go processURL(url, options.Passive, options.Verbose, timeout, options.Insecure, options.UserAgent, &wg, sem, options.Delay, options.JSONOutput, options.JSONtype, outputFile, options)
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -1549,7 +1659,7 @@ func main() {
 		url := strings.TrimSpace(scanner.Text())
 		if url != "" {
 			wg.Add(1)
-			go processURL(url, *passiveFlag, *verboseFlag, timeout, *insecureFlag, *uaFlag, &wg, sem, *delayFlag, *jsonFlag, *jsonTypeFlag, outputFile)
+			go processURL(url, options.Passive, options.Verbose, timeout, options.Insecure, options.UserAgent, &wg, sem, options.Delay, options.JSONOutput, options.JSONtype, outputFile, options)
 		}
 	}
 	if err := scanner.Err(); err != nil {

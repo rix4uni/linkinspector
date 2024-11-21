@@ -9,9 +9,9 @@ go install github.com/rix4uni/linkinspector@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.2/linkinspector-linux-amd64-0.0.2.tgz
-tar -xvzf linkinspector-linux-amd64-0.0.2.tgz
-rm -rf linkinspector-linux-amd64-0.0.2.tgz
+wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.3/linkinspector-linux-amd64-0.0.3.tgz
+tar -xvzf linkinspector-linux-amd64-0.0.3.tgz
+rm -rf linkinspector-linux-amd64-0.0.3.tgz
 mv linkinspector ~/go/bin/linkinspector
 ```
 Or download [binary release](https://github.com/rix4uni/linkinspector/releases) for your platform.
@@ -24,37 +24,46 @@ cd linkinspector; go install
 
 ## Usage
 ```console
-Usage of linkinspector:
-  -ao string
-        File to append output results instead of overwriting
-  -c int
-        Number of concurrent goroutines (default 50)
-  -delay duration
-        Duration between each HTTP request (eg: 200ms, 1s) (default -1ns)
-  -insecure
-        Disable TLS certificate verification
-  -json
-        Output in JSON format
-  -json-type string
-        Output in JSON type, MarshalIndent or Marshal (default "MarshalIndent")
-  -list string
-        File containing list of URLs to check
-  -o string
-        File to write output results
-  -passive
-        Enable passive mode to skip requests for specific extensions
-  -silent
-        silent mode.
-  -timeout int
-        HTTP request timeout duration (in seconds) (default 10)
-  -u string
-        Single URL to check
-  -ua string
-        Custom User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36")
-  -verbose
-        Enable verbose mode to print more information
-  -version
-        Print the version of the tool and exit.
+linkinspector is a command-line tool that analyzes URLs to retrieve HTTP status codes, content lengths, and content types.
+
+Usage:
+  linkinspector [flags]
+
+Flags:
+INPUT:
+   -u, -target string  Single URL to check
+   -l, -list string    File containing list of URLs to check
+
+PROBES:
+   -passive  Enable passive mode to skip requests for specific extensions
+
+MATCHERS:
+   -mc, -match-code string    Match response with specified status code (e.g., -mc 200,302)
+   -ml, -match-length string  Match response with specified content length (e.g., -ml 100,102)
+   -mt, -match-type string    Match response with specified content type (e.g., -mt "application/octet-stream,text/html")
+   -ms, -match-suffix string  Match response with specified suffix name (e.g., -ms "ZIP,PHP,7Z")
+
+OUTPUT:
+   -o, -output string     File to write output results
+   -append-output string  File to append output results instead of overwriting
+   -json                  Output in JSON format
+   -json-type string      Output in JSON type, MarshalIndent or Marshal (default "MarshalIndent")
+
+RATE-LIMIT:
+   -t, -threads int  Number of threads to use (default 50)
+
+CONFIGURATIONS:
+   -H string  Custom User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36")
+
+DEBUG:
+   -verbose  Enable verbose output for debugging purposes
+   -version  Print the version of the tool and exit
+   -silent   silent mode
+
+OPTIMIZATIONS:
+   -timeout int  HTTP request timeout duration (in seconds) (default 10)
+   -insecure     Disable TLS certificate verification
+   -delay value  Duration between each HTTP request (e.g., 200ms, 1s) (default -1ns)
 ```
 
 ## Usage Examples
@@ -165,6 +174,21 @@ Usage of linkinspector:
 - **wasm** - `application/wasm`
 - **dex** - `application/vnd.android.dex`
 - **dey** - `application/vnd.android.dey`
+
+## TODO
+```
+# add these flags
+
+FILTERS:
+   -fc, -filter-code string            filter response with specified status code (-fc 403,401)
+   -fl, -filter-length string          filter response with specified content length (-fl 23,33)
+   -ft, -filter-content-type string    filter response with specified content type (-ft "text/html,image/jpeg")
+   -fs, -filter-suffix-name string     filter response with specified suffix name (-fs "CSS,Plain Text,html")
+
+and
+
+-nc Do not write colored output to terminal or file
+```
 
 ## Extension Sources
 - https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
