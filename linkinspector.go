@@ -17,29 +17,30 @@ import (
 )
 
 type Options struct {
-	InputTargetHost   string
-	InputFile         string
-	Passive           bool
-	MatchCode         string
-	MatchLength       string
-	MatchType         string
-	MatchSuffix       string
-	FilterCode        string
-	FilterLength      string
-	FilterContentType string
-	FilterSuffixName  string
-	Output            string
-	AppendOutput      string
-	JSONOutput        bool
-	JSONtype          string
-	Threads           int
-	UserAgent         string
-	Verbose           bool
-	Version           bool
-	Silent            bool
-	Timeout           int
-	Insecure          bool
-	Delay             time.Duration
+	InputTargetHost string
+	InputFile       string
+	Passive         bool
+	MatchCode       string
+	MatchLength     string
+	MatchType       string
+	MatchSuffix     string
+	// FilterCode      string
+	// FilterLength    string
+	// FilterType      string
+	// FilterSuffix    string
+	Output       string
+	AppendOutput string
+	JSONOutput   bool
+	JSONtype     string
+	Threads      int
+	UserAgent    string
+	Verbose      bool
+	Version      bool
+	Silent       bool
+	NoColor      bool
+	Timeout      int
+	Insecure     bool
+	Delay        time.Duration
 }
 
 // Define the flags
@@ -65,10 +66,10 @@ func ParseOptions() *Options {
 	)
 
 	// createGroup(flagSet, "filters", "Filters",
-	//  	flag.StringVar(&options.FilterCode, "fc", "", "Filter response with specified status code (e.g., 403,401)")
-	// 	flag.StringVar(&options.FilterLength, "fl", "", "Filter response with specified content length (e.g., 23,33)")
-	// 	flag.StringVar(&options.FilterContentType, "ft", "", "Filter response with specified content type (e.g., \"text/html,image/jpeg\")")
-	// 	flag.StringVar(&options.FilterSuffixName, "fs", "", "Filter response with specified suffix name (e.g., \"CSS,Plain Text,html\")")
+	// 	flagSet.StringVarP(&options.FilterCode, "filter-code", "fc", "", "Filter response with specified status code (e.g., -fc 403,401)"),
+	// 	flagSet.StringVarP(&options.FilterLength, "filter-length", "fl", "", "Filter response with specified content length (e.g., -fl 23,33)"),
+	// 	flagSet.StringVarP(&options.FilterType, "filter-type", "ft", "", "Filter response with specified content type (e.g., -ft \"text/html,image/jpeg\")"),
+	// 	flagSet.StringVarP(&options.FilterSuffix, "filter-suffix", "fs", "", "Filter response with specified suffix name (e.g., -fs \"CSS,Plain Text,html\")"),
 	// )
 
 	createGroup(flagSet, "output", "Output",
@@ -90,6 +91,7 @@ func ParseOptions() *Options {
 		flagSet.BoolVar(&options.Verbose, "verbose", false, "Enable verbose output for debugging purposes"),
 		flagSet.BoolVar(&options.Version, "version", false, "Print the version of the tool and exit"),
 		flagSet.BoolVar(&options.Silent, "silent", false, "silent mode"),
+		flagSet.BoolVarP(&options.NoColor, "no-color", "nc", false, "disable colors in cli output"),
 	)
 
 	createGroup(flagSet, "optimizations", "OPTIMIZATIONS",
@@ -312,9 +314,17 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 	// Handle non-verbose and verbose output.
 	outputLine := ""
 	if verbose {
-		outputLine = fmt.Sprintf("%s: %s [%d] [%d] [%s] %s\n", aurora.Bold(aurora.Blue("REQUEST BASED")), url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
+		if options.NoColor {
+			outputLine = fmt.Sprintf("REQUEST BASED: %s [%d] [%d] [%s] %s\n", url, statusCode, contentLength, contentType, suffix)
+		} else {
+			outputLine = fmt.Sprintf("%s: %s [%d] [%d] [%s] %s\n", aurora.Bold(aurora.Blue("REQUEST BASED")), url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
+		}
 	} else {
-		outputLine = fmt.Sprintf("%s [%d] [%d] [%s] %s\n", url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
+		if options.NoColor {
+			outputLine = fmt.Sprintf("%s [%d] [%d] [%s] %s\n", url, statusCode, contentLength, contentType, suffix)
+		} else {
+			outputLine = fmt.Sprintf("%s [%d] [%d] [%s] %s\n", url, aurora.Green(statusCode), aurora.Magenta(contentLength), aurora.Magenta(contentType), aurora.Yellow(suffix))
+		}
 	}
 	fmt.Print(outputLine)
 	if outputFile != nil {
@@ -1558,20 +1568,29 @@ func processURL(url string, passive bool, verbose bool, timeout time.Duration, i
 						if outputFile != nil {
 							outputFile.WriteString(string(jsonData) + "\n")
 						}
+						return
+					}
 
-					} else if !verbose {
-						outputLine := fmt.Sprintf("%s %s\n", url, aurora.Yellow(label))
-						fmt.Print(outputLine)
-						if outputFile != nil {
-							outputFile.WriteString(outputLine)
+					// Handle non-verbose and verbose output.
+					outputLine := ""
+					if verbose {
+						if options.NoColor {
+							outputLine = fmt.Sprintf("EXTENSION BASED: %s %s\n", url, label)
+						} else {
+							outputLine = fmt.Sprintf("%s: %s %s\n", aurora.Cyan("EXTENSION BASED"), url, aurora.Yellow(label))
 						}
 					} else {
-						outputLine := fmt.Sprintf("%s: %s %s\n", aurora.Cyan("EXTENSION BASED"), url, aurora.Yellow(label))
-						fmt.Print(outputLine)
-						if outputFile != nil {
-							outputFile.WriteString(outputLine)
+						if options.NoColor {
+							outputLine = fmt.Sprintf("%s %s\n", url, label)
+						} else {
+							outputLine = fmt.Sprintf("%s %s\n", url, aurora.Yellow(label))
 						}
 					}
+					fmt.Print(outputLine)
+					if outputFile != nil {
+						outputFile.WriteString(outputLine)
+					}
+
 					time.Sleep(delay) // Apply delay between requests
 					return
 				}

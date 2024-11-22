@@ -9,9 +9,9 @@ go install github.com/rix4uni/linkinspector@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.3/linkinspector-linux-amd64-0.0.3.tgz
-tar -xvzf linkinspector-linux-amd64-0.0.3.tgz
-rm -rf linkinspector-linux-amd64-0.0.3.tgz
+wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.4/linkinspector-linux-amd64-0.0.4.tgz
+tar -xvzf linkinspector-linux-amd64-0.0.4.tgz
+rm -rf linkinspector-linux-amd64-0.0.4.tgz
 mv linkinspector ~/go/bin/linkinspector
 ```
 Or download [binary release](https://github.com/rix4uni/linkinspector/releases) for your platform.
@@ -59,6 +59,7 @@ DEBUG:
    -verbose  Enable verbose output for debugging purposes
    -version  Print the version of the tool and exit
    -silent   silent mode
+   -nc, -no-color  disable colors in cli output
 
 OPTIMIZATIONS:
    -timeout int  HTTP request timeout duration (in seconds) (default 10)
@@ -180,14 +181,10 @@ OPTIMIZATIONS:
 # add these flags
 
 FILTERS:
-   -fc, -filter-code string            filter response with specified status code (-fc 403,401)
-   -fl, -filter-length string          filter response with specified content length (-fl 23,33)
-   -ft, -filter-content-type string    filter response with specified content type (-ft "text/html,image/jpeg")
-   -fs, -filter-suffix-name string     filter response with specified suffix name (-fs "CSS,Plain Text,html")
-
-and
-
--nc Do not write colored output to terminal or file
+   -fc, -filter-code string    Filter response with specified status code (e.g., -fc 403,401)
+   -fl, -filter-length string  Filter response with specified content length (e.g., -fl 23,33)
+   -ft, -filter-type string    Filter response with specified content type (e.g., -ft "text/html,image/jpeg")
+   -fs, -filter-suffix string  Filter response with specified suffix name (e.g., -fs "CSS,Plain Text,html")
 ```
 
 ## Extension Sources
