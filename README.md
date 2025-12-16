@@ -1,6 +1,6 @@
 ## linkinspector
 
-linkinspector is a command-line tool that analyzes URLs to retrieve HTTP status codes, content lengths, and content types. It features color-coded output, passive checks for specific file extensions, and supports input from stdin or files.
+linkinspector is a fast command-line tool for inspecting URLs and retrieving HTTP status codes, content lengths, and content types. It supports filtering and matching responses, and can process URLs from stdin or files.
 
 ## Installation
 ```
@@ -9,9 +9,9 @@ go install github.com/rix4uni/linkinspector@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.4/linkinspector-linux-amd64-0.0.4.tgz
-tar -xvzf linkinspector-linux-amd64-0.0.4.tgz
-rm -rf linkinspector-linux-amd64-0.0.4.tgz
+wget https://github.com/rix4uni/linkinspector/releases/download/v0.0.5/linkinspector-linux-amd64-0.0.5.tgz
+tar -xvzf linkinspector-linux-amd64-0.0.5.tgz
+rm -rf linkinspector-linux-amd64-0.0.5.tgz
 mv linkinspector ~/go/bin/linkinspector
 ```
 Or download [binary release](https://github.com/rix4uni/linkinspector/releases) for your platform.
@@ -21,6 +21,30 @@ Or download [binary release](https://github.com/rix4uni/linkinspector/releases) 
 git clone --depth 1 github.com/rix4uni/linkinspector.git
 cd linkinspector; go install
 ```
+
+## Configuration
+
+linkinspector requires a `config.yaml` file for extension mappings. The tool automatically manages this file in your home directory.
+
+### config.yaml Structure
+
+The `config.yaml` file must contain two main sections:
+
+- **valid_extensions**: Maps MIME content types to suffix labels (e.g., `image/jpeg: "[jpg]"`)
+- **passive_extensions**: Maps file extensions to suffix labels (e.g., `".jpg": "[jpg]"`)
+
+### Location
+
+The `config.yaml` file is stored in `~/.config/linkinspector/config.yaml`. 
+
+**Automatic Setup:**
+- The directory `~/.config/linkinspector` is automatically created if it doesn't exist
+- The `config.yaml` file is automatically downloaded from GitHub if it doesn't exist
+- The file is downloaded from: `https://raw.githubusercontent.com/rix4uni/linkinspector/refs/heads/main/config.yaml`
+
+### Customization
+
+You can customize the `config.yaml` file in `~/.config/linkinspector/config.yaml` to add or modify extension mappings according to your needs. The file uses standard YAML syntax. Your customizations will persist across tool updates.
 
 ## Usage
 ```console
@@ -43,11 +67,16 @@ MATCHERS:
    -mt, -match-type string    Match response with specified content type (e.g., -mt "application/octet-stream,text/html")
    -ms, -match-suffix string  Match response with specified suffix name (e.g., -ms "ZIP,PHP,7Z")
 
+FILTERS:
+   -fc, -filter-code string    Filter response with specified status code (e.g., -fc 403,401)
+   -fl, -filter-length string  Filter response with specified content length (e.g., -fl 23,33)
+   -ft, -filter-type string    Filter response with specified content type (e.g., -ft "text/html,image/jpeg")
+   -fs, -filter-suffix string  Filter response with specified suffix name (e.g., -fs "CSS,Plain Text,html")
+
 OUTPUT:
-   -o, -output string     File to write output results
-   -append-output string  File to append output results instead of overwriting
-   -json                  Output in JSON format
-   -json-type string      Output in JSON type, MarshalIndent or Marshal (default "MarshalIndent")
+   -o, -output string  File to write output results
+   -json               Output in JSON format
+   -json-type string   Output in JSON type, MarshalIndent or Marshal (default "MarshalIndent")
 
 RATE-LIMIT:
    -t, -threads int  Number of threads to use (default 50)
@@ -56,16 +85,33 @@ CONFIGURATIONS:
    -H string  Custom User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36")
 
 DEBUG:
-   -verbose  Enable verbose output for debugging purposes
-   -version  Print the version of the tool and exit
-   -silent   silent mode
+   -verbose        Enable verbose output for debugging purposes
+   -version        Print the version of the tool and exit
+   -silent         silent mode
    -nc, -no-color  disable colors in cli output
 
 OPTIMIZATIONS:
-   -timeout int  HTTP request timeout duration (in seconds) (default 10)
+   -timeout int  HTTP request timeout duration (in seconds) (default 30)
    -insecure     Disable TLS certificate verification
    -delay value  Duration between each HTTP request (e.g., 200ms, 1s) (default -1ns)
 ```
+
+## Matchers vs Filters
+
+**Matchers** are used to **include** responses that match specific criteria:
+- If a matcher is specified, only responses matching the criteria will be shown
+- Multiple values can be specified separated by commas
+- If no matcher is specified, all responses are shown
+
+**Filters** are used to **exclude** responses that match specific criteria:
+- If a filter is specified, responses matching the filter criteria will be excluded
+- Multiple values can be specified separated by commas
+- Filters are applied after matchers
+
+**Example**: Using both matchers and filters together:
+- `-mc 200,302` (match only 200 and 302 status codes)
+- `-fc 404` (filter out 404 status codes)
+- Result: Shows only 200 and 302 responses, excluding any 404s
 
 ## Usage Examples
 
@@ -81,7 +127,57 @@ OPTIMIZATIONS:
 └─# cat urls.txt | linkinspector
 ```
 
+#### Using Matchers
+```bash
+# Match only 200 and 302 status codes
+└─# echo "https://example.com" | linkinspector -mc 200,302
+
+# Match specific content types
+└─# cat urls.txt | linkinspector -mt "application/pdf,application/zip"
+
+# Match specific suffixes
+└─# cat urls.txt | linkinspector -ms "ZIP,PDF,PHP"
+```
+
+#### Using Filters
+```bash
+# Filter out 403 and 401 status codes
+└─# cat urls.txt | linkinspector -fc 403,401
+
+# Filter out specific content types
+└─# cat urls.txt | linkinspector -ft "text/html,image/jpeg"
+
+# Filter out specific suffixes
+└─# cat urls.txt | linkinspector -fs "CSS,Plain Text,html"
+```
+
+#### Combining Matchers and Filters
+```bash
+# Match 200 status codes but filter out HTML content
+└─# cat urls.txt | linkinspector -mc 200 -ft "text/html"
+
+# Match ZIP files but filter out small files
+└─# cat urls.txt | linkinspector -ms "ZIP" -fl 0,100
+```
+
+#### Passive Mode
+```bash
+# Use passive mode to check extensions without making requests
+└─# cat urls.txt | linkinspector -passive
+```
+
+#### JSON Output
+```bash
+# Output results in JSON format
+└─# cat urls.txt | linkinspector -json
+
+# Output in compact JSON format
+└─# cat urls.txt | linkinspector -json -json-type Marshal
+```
+
 ## Supported types
+
+linkinspector supports a wide variety of file types including images, videos, audio files, archives, documents, fonts, programming languages, and more. The complete list of supported types and their MIME type mappings can be found in the `config.yaml` file located at `~/.config/linkinspector/config.yaml`.
 
 #### Image
 
@@ -175,17 +271,6 @@ OPTIMIZATIONS:
 - **wasm** - `application/wasm`
 - **dex** - `application/vnd.android.dex`
 - **dey** - `application/vnd.android.dey`
-
-## TODO
-```
-# add these flags
-
-FILTERS:
-   -fc, -filter-code string    Filter response with specified status code (e.g., -fc 403,401)
-   -fl, -filter-length string  Filter response with specified content length (e.g., -fl 23,33)
-   -ft, -filter-type string    Filter response with specified content type (e.g., -ft "text/html,image/jpeg")
-   -fs, -filter-suffix string  Filter response with specified suffix name (e.g., -fs "CSS,Plain Text,html")
-```
 
 ## Extension Sources
 - https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
