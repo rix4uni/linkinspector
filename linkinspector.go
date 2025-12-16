@@ -242,7 +242,9 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 	// Create a new HTTP request with the custom User-Agent header.
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("Error creating request for %s: %v\n", url, err)
+		if verbose {
+			fmt.Printf("Error creating request for %s: %v\n", url, err)
+		}
 		return
 	}
 	req.Header.Set("User-Agent", userAgent)
@@ -250,7 +252,9 @@ func getURLInfo(url string, verbose bool, timeout time.Duration, insecure bool, 
 	// Perform the HTTP request.
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Error fetching %s: %v\n", url, err)
+		if verbose {
+			fmt.Printf("Error fetching %s: %v\n", url, err)
+		}
 		return
 	}
 	defer resp.Body.Close()
