@@ -77,7 +77,7 @@ func downloadConfig(url, filepath string) error {
 	return nil
 }
 
-// loadConfig loads the configuration from config.yaml file.
+// loadConfig loads the configuration from extensions.yaml file.
 // Exits with an error if the file is missing, cannot be read, or is invalid.
 func loadConfig() *Config {
 	config := &Config{
@@ -94,7 +94,7 @@ func loadConfig() *Config {
 
 	// Build config directory and file paths
 	configDir := filepath.Join(homeDir, ".config", "linkinspector")
-	configPath := filepath.Join(configDir, "config.yaml")
+	configPath := filepath.Join(configDir, "extensions.yaml")
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -102,31 +102,31 @@ func loadConfig() *Config {
 		os.Exit(1)
 	}
 
-	// Check if config.yaml exists, download if it doesn't
+	// Check if extensions.yaml exists, download if it doesn't
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		configURL := "https://raw.githubusercontent.com/rix4uni/linkinspector/refs/heads/main/config.yaml"
+		configURL := "https://raw.githubusercontent.com/rix4uni/linkinspector/refs/heads/main/extensions.yaml"
 		if err := downloadConfig(configURL, configPath); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	}
 
-	// Read config.yaml file
+	// Read extensions.yaml file
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to read config.yaml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Failed to read extensions.yaml: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Parse YAML
 	if err := yaml.Unmarshal(data, config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to parse config.yaml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Failed to parse extensions.yaml: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Validate that config is not empty
 	if len(config.ValidExtensions) == 0 && len(config.PassiveExtensions) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: config.yaml is empty or contains no valid configuration\n")
+		fmt.Fprintf(os.Stderr, "Error: extensions.yaml is empty or contains no valid configuration\n")
 		os.Exit(1)
 	}
 
@@ -443,7 +443,7 @@ func main() {
 		banner.PrintBanner()
 	}
 
-	// Load configuration from config.yaml
+	// Load configuration from extensions.yaml
 	config := loadConfig()
 
 	// Convert Timeout to a time.Duration

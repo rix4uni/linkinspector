@@ -24,27 +24,27 @@ cd linkinspector; go install
 
 ## Configuration
 
-linkinspector requires a `config.yaml` file for extension mappings. The tool automatically manages this file in your home directory.
+linkinspector requires a `extensions.yaml` file for extension mappings. The tool automatically manages this file in your home directory.
 
-### config.yaml Structure
+### extensions.yaml Structure
 
-The `config.yaml` file must contain two main sections:
+The `extensions.yaml` file must contain two main sections:
 
 - **valid_extensions**: Maps MIME content types to suffix labels (e.g., `image/jpeg: "[jpg]"`)
 - **passive_extensions**: Maps file extensions to suffix labels (e.g., `".jpg": "[jpg]"`)
 
 ### Location
 
-The `config.yaml` file is stored in `~/.config/linkinspector/config.yaml`. 
+The `extensions.yaml` file is stored in `~/.config/linkinspector/extensions.yaml`. 
 
 **Automatic Setup:**
 - The directory `~/.config/linkinspector` is automatically created if it doesn't exist
-- The `config.yaml` file is automatically downloaded from GitHub if it doesn't exist
-- The file is downloaded from: `https://raw.githubusercontent.com/rix4uni/linkinspector/refs/heads/main/config.yaml`
+- The `extensions.yaml` file is automatically downloaded from GitHub if it doesn't exist
+- The file is downloaded from: `https://raw.githubusercontent.com/rix4uni/linkinspector/refs/heads/main/extensions.yaml`
 
 ### Customization
 
-You can customize the `config.yaml` file in `~/.config/linkinspector/config.yaml` to add or modify extension mappings according to your needs. The file uses standard YAML syntax. Your customizations will persist across tool updates.
+You can customize the `extensions.yaml` file in `~/.config/linkinspector/extensions.yaml` to add or modify extension mappings according to your needs. The file uses standard YAML syntax. Your customizations will persist across tool updates.
 
 ## Usage
 ```console
@@ -177,7 +177,7 @@ OPTIMIZATIONS:
 
 ## Supported types
 
-linkinspector supports a wide variety of file types including images, videos, audio files, archives, documents, fonts, programming languages, and more. The complete list of supported types and their MIME type mappings can be found in the `config.yaml` file located at `~/.config/linkinspector/config.yaml`.
+linkinspector supports a wide variety of file types including images, videos, audio files, archives, documents, fonts, programming languages, and more. The complete list of supported types and their MIME type mappings can be found in the `extensions.yaml` file located at `~/.config/linkinspector/extensions.yaml`.
 
 #### Image
 
