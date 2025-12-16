@@ -116,19 +116,19 @@ OPTIMIZATIONS:
 ## Usage Examples
 
 #### Single URL
-```bash
+```yaml
 ┌──(root㉿kali)-[/root/linkinspector]
 └─# echo "https://linkinspector.netlify.app/nuclei-templates.zip" | linkinspector
 ```
 
 #### Multiple URLs
-```bash
+```yaml
 ┌──(root㉿kali)-[/root/linkinspector]
 └─# cat urls.txt | linkinspector
 ```
 
 #### Using Matchers
-```bash
+```yaml
 # Match only 200 and 302 status codes
 └─# echo "https://example.com" | linkinspector -mc 200,302
 
@@ -140,7 +140,7 @@ OPTIMIZATIONS:
 ```
 
 #### Using Filters
-```bash
+```yaml
 # Filter out 403 and 401 status codes
 └─# cat urls.txt | linkinspector -fc 403,401
 
@@ -152,7 +152,7 @@ OPTIMIZATIONS:
 ```
 
 #### Combining Matchers and Filters
-```bash
+```yaml
 # Match 200 status codes but filter out HTML content
 └─# cat urls.txt | linkinspector -mc 200 -ft "text/html"
 
@@ -161,13 +161,13 @@ OPTIMIZATIONS:
 ```
 
 #### Passive Mode
-```bash
+```yaml
 # Use passive mode to check extensions without making requests
 └─# cat urls.txt | linkinspector -passive
 ```
 
 #### JSON Output
-```bash
+```yaml
 # Output results in JSON format
 └─# cat urls.txt | linkinspector -json
 
